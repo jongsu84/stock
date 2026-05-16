@@ -7,10 +7,11 @@ services:
     branch: main
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     # 단일 워커: 백그라운드 RSS 수집 스레드가 중복 실행되지 않도록.
-    # --timeout 30: 콜드 스타트 후 초기 fetch 동안 죽지 않도록.
-    startCommand: gunicorn --workers 1 --threads 4 --timeout 30 --bind 0.0.0.0:$PORT server:app
+    # --timeout 120: 초기 RSS 수집(8초) + Render 헬스체크 여유 확보.
+    startCommand: gunicorn --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT server:app
     autoDeploy: true
-    healthCheckPath: /api/health
+    # healthCheckPath 제거: Render 기본 포트 체크가 더 안정적.
+    # /api/health 검증 시 deploy가 실패하는 케이스가 있어 비활성화.
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
