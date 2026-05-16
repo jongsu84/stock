@@ -5,9 +5,23 @@ const API_REFRESH = "/api/refresh";
 const AUTO_REFRESH_MS = 60_000;
 const NEW_THRESHOLD_MS = 10 * 60 * 1000;
 
+const MARKET_LABELS = {
+  kr_stock: "국내주식",
+  us_stock: "해외주식",
+  kr_coin: "국내코인",
+  us_coin: "해외코인",
+};
+
+const MARKET_TAG_CLASS = {
+  kr_stock: "kr-stock",
+  us_stock: "us-stock",
+  kr_coin: "kr-coin",
+  us_coin: "us-coin",
+};
+
 const state = {
   items: [],
-  filter: "all",
+  filter: "kr_stock",
   query: "",
   seenIds: new Set(),
   firstLoad: true,
@@ -15,8 +29,8 @@ const state = {
 };
 
 const els = {
-  listKr: document.getElementById("listKr"),
-  listUs: document.getElementById("listUs"),
+  list: document.getElementById("newsList"),
+  colTitle: document.getElementById("activeColTitle"),
   countLabel: document.getElementById("countLabel"),
   statusLine: document.getElementById("statusLine"),
   updatedAt: document.getElementById("updatedAt"),
@@ -25,7 +39,6 @@ const els = {
   refreshBtn: document.getElementById("refreshBtn"),
   search: document.getElementById("searchInput"),
   tabs: document.querySelectorAll(".tab"),
-  layout: document.querySelector(".layout"),
 };
 
 function escapeHtml(str) {
@@ -62,11 +75,12 @@ function matchesQuery(item, q) {
 }
 
 function renderCard(item, isNew) {
-  const tagClass = item.market === "kr" ? "kr" : "us";
+  const tagClass = MARKET_TAG_CLASS[item.market] || "kr-stock";
+  const tagLabel = MARKET_LABELS[item.market] || item.market;
   return `
     <a class="card${isNew ? " new" : ""}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">
       <div class="card-meta">
-        <span class="tag ${tagClass}">${item.market === "kr" ? "국내" : "해외"}</span>
+        <span class="tag ${tagClass}">${tagLabel}</span>
         <span>${escapeHtml(item.source)}</span>
         <span class="sep">·</span>
         <span class="card-time">${timeAgo(item.published)}</span>
@@ -81,37 +95,41 @@ function render() {
   const q = state.query.trim().toLowerCase();
   const now = Date.now();
 
-  const krItems = state.items.filter((i) => i.market === "kr" && matchesQuery(i, q));
-  const usItems = state.items.filter((i) => i.market === "us" && matchesQuery(i, q));
+  const filtered = state.items.filter(
+    (i) => i.market === state.filter && matchesQuery(i, q)
+  );
 
-  const renderList = (el, list) => {
-    if (!list.length) {
-      el.innerHTML = `<div class="empty">표시할 뉴스가 없습니다</div>`;
-      return;
-    }
-    el.innerHTML = list
+  if (!filtered.length) {
+    els.list.innerHTML = `<div class="empty">표시할 뉴스가 없습니다</div>`;
+  } else {
+    els.list.innerHTML = filtered
       .map((item) => {
         const t = new Date(item.published).getTime();
-        const isNew = !state.firstLoad && !state.seenIds.has(item.id) && now - t < NEW_THRESHOLD_MS;
+        const isNew =
+          !state.firstLoad && !state.seenIds.has(item.id) && now - t < NEW_THRESHOLD_MS;
         return renderCard(item, isNew);
       })
       .join("");
-  };
+  }
 
-  renderList(els.listKr, krItems);
-  renderList(els.listUs, usItems);
+  // 카테고리별 카운트 표시
+  const perMarket = Object.keys(MARKET_LABELS).reduce((acc, m) => {
+    acc[m] = state.items.filter((i) => i.market === m).length;
+    return acc;
+  }, {});
+  els.countLabel.textContent =
+    `${filtered.length}건  ` +
+    Object.entries(perMarket)
+      .map(([m, n]) => `${MARKET_LABELS[m]} ${n}`)
+      .join(" · ");
 
-  let visibleCount = 0;
-  if (state.filter === "all") visibleCount = krItems.length + usItems.length;
-  else if (state.filter === "kr") visibleCount = krItems.length;
-  else visibleCount = usItems.length;
-  els.countLabel.textContent = `${visibleCount}건 (국내 ${krItems.length} / 해외 ${usItems.length})`;
+  els.colTitle.textContent = MARKET_LABELS[state.filter] || state.filter;
 }
 
 function applyFilter() {
-  els.layout.classList.remove("filter-kr", "filter-us");
-  if (state.filter !== "all") els.layout.classList.add(`filter-${state.filter}`);
-  els.tabs.forEach((t) => t.classList.toggle("active", t.dataset.filter === state.filter));
+  els.tabs.forEach((t) =>
+    t.classList.toggle("active", t.dataset.filter === state.filter)
+  );
   render();
 }
 
@@ -121,7 +139,9 @@ async function fetchNews(triggeredByUser = false) {
   els.statusLine.textContent = "불러오는 중…";
   if (triggeredByUser) {
     els.refreshBtn.classList.add("spinning");
-    try { await fetch(API_REFRESH, { method: "POST" }); } catch (_) {}
+    try {
+      await fetch(API_REFRESH, { method: "POST" });
+    } catch (_) {}
   }
   try {
     const res = await fetch(API_NEWS, { cache: "no-store" });
@@ -174,6 +194,12 @@ function setupEvents() {
     if (e.key === "r" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
       e.preventDefault();
       fetchNews(true);
+    }
+    // 숫자 키 1-4로 탭 빠른 이동
+    if (["1", "2", "3", "4"].includes(e.key) && document.activeElement !== els.search) {
+      const filters = ["kr_stock", "us_stock", "kr_coin", "us_coin"];
+      state.filter = filters[parseInt(e.key, 10) - 1];
+      applyFilter();
     }
   });
 }

@@ -34,28 +34,50 @@ log = logging.getLogger("dashboard")
 REFRESH_INTERVAL_SECONDS = 180  # 3 minutes
 REQUEST_TIMEOUT_SECONDS = 10
 MAX_ITEMS_PER_FEED = 20
-MAX_TOTAL_ITEMS = 80
+MAX_TOTAL_ITEMS = 200
 
-
+# 시장 코드: kr_stock(국내주식), us_stock(해외주식), kr_coin(국내코인), us_coin(해외코인)
 # (market, source_label, feed_url)
 FEEDS: list[tuple[str, str, str]] = [
-    # 국내 — 증권/금융 중심
-    ("kr", "한국경제 증권", "https://rss.hankyung.com/feed/stock.xml"),
-    ("kr", "한국경제 금융", "https://rss.hankyung.com/feed/finance.xml"),
-    ("kr", "매일경제 증권", "https://www.mk.co.kr/rss/50200011/"),
-    ("kr", "매일경제 증권일반", "https://www.mk.co.kr/rss/50300009/"),
-    ("kr", "매일경제 코스피", "https://www.mk.co.kr/rss/50200012/"),
-    ("kr", "매일경제 코스닥", "https://www.mk.co.kr/rss/50200013/"),
-    ("kr", "연합뉴스 경제", "https://www.yna.co.kr/rss/economy.xml"),
-    # 해외 — 마켓/증권 중심
-    ("us", "Yahoo Finance", "https://finance.yahoo.com/news/rssindex"),
-    ("us", "CNBC Top News", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"),
-    ("us", "MarketWatch Top", "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
-    ("us", "MarketWatch RealTime", "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines"),
-    ("us", "Investing.com Stock", "https://www.investing.com/rss/news_25.rss"),
-    ("us", "Investing.com Market", "https://www.investing.com/rss/news_301.rss"),
-    ("us", "SeekingAlpha Market", "https://seekingalpha.com/market_currents.xml"),
+    # ---------- 국내 주식 ----------
+    ("kr_stock", "한국경제 증권", "https://rss.hankyung.com/feed/stock.xml"),
+    ("kr_stock", "한국경제 금융", "https://rss.hankyung.com/feed/finance.xml"),
+    ("kr_stock", "매일경제 증권", "https://www.mk.co.kr/rss/50200011/"),
+    ("kr_stock", "매일경제 증권일반", "https://www.mk.co.kr/rss/50300009/"),
+    ("kr_stock", "매일경제 코스피", "https://www.mk.co.kr/rss/50200012/"),
+    ("kr_stock", "매일경제 코스닥", "https://www.mk.co.kr/rss/50200013/"),
+    ("kr_stock", "연합뉴스 경제", "https://www.yna.co.kr/rss/economy.xml"),
+    # ---------- 해외 주식 ----------
+    ("us_stock", "Yahoo Finance", "https://finance.yahoo.com/news/rssindex"),
+    ("us_stock", "CNBC Top News", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"),
+    ("us_stock", "MarketWatch Top", "https://feeds.content.dowjones.io/public/rss/mw_topstories"),
+    ("us_stock", "MarketWatch RealTime", "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines"),
+    ("us_stock", "Investing.com Stock", "https://www.investing.com/rss/news_25.rss"),
+    ("us_stock", "Investing.com Market", "https://www.investing.com/rss/news_301.rss"),
+    ("us_stock", "SeekingAlpha Market", "https://seekingalpha.com/market_currents.xml"),
+    # ---------- 국내 코인 ----------
+    ("kr_coin", "토큰포스트", "https://www.tokenpost.kr/rss"),
+    ("kr_coin", "블록미디어", "https://www.blockmedia.co.kr/feed"),
+    ("kr_coin", "디지털투데이", "https://www.digitaltoday.co.kr/rss/allArticle.xml"),
+    ("kr_coin", "Google뉴스 암호화폐", "https://news.google.com/rss/search?q=암호화폐+OR+비트코인+OR+이더리움&hl=ko&gl=KR&ceid=KR:ko"),
+    # ---------- 해외 코인 ----------
+    ("us_coin", "CoinDesk", "https://feeds.feedburner.com/CoinDesk"),
+    ("us_coin", "CoinTelegraph", "https://cointelegraph.com/rss"),
+    ("us_coin", "Decrypt", "https://decrypt.co/feed"),
+    ("us_coin", "The Block", "https://www.theblock.co/rss.xml"),
+    ("us_coin", "CryptoSlate", "https://cryptoslate.com/feed/"),
+    ("us_coin", "CryptoBriefing", "https://cryptobriefing.com/feed/"),
+    ("us_coin", "NewsBTC", "https://www.newsbtc.com/feed/"),
+    ("us_coin", "Cryptonews", "https://cryptonews.com/news/feed/"),
 ]
+
+# 시장별 사람이 읽는 라벨
+MARKET_LABELS = {
+    "kr_stock": "국내주식",
+    "us_stock": "해외주식",
+    "kr_coin": "국내코인",
+    "us_coin": "해외코인",
+}
 
 
 @dataclass
@@ -178,12 +200,12 @@ def refresh_all() -> None:
 
     deduped = deduped[:MAX_TOTAL_ITEMS]
     store.replace(deduped)
+    counts = {m: sum(1 for i in deduped if i.market == m) for m in MARKET_LABELS}
     log.info(
-        "refresh done in %.2fs, %d items (kr=%d, us=%d)",
+        "refresh done in %.2fs, %d items (%s)",
         time.time() - start,
         len(deduped),
-        sum(1 for i in deduped if i.market == "kr"),
-        sum(1 for i in deduped if i.market == "us"),
+        ", ".join(f"{m}={n}" for m, n in counts.items()),
     )
 
 
@@ -245,6 +267,7 @@ def api_news():
             if last_updated
             else None,
             "refresh_interval_seconds": REFRESH_INTERVAL_SECONDS,
+            "markets": MARKET_LABELS,
             "count": len(items),
             "items": [asdict(i) for i in items],
         }

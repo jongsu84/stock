@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>주식 뉴스 대시보드</title>
+<title>주식·코인 뉴스 대시보드</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     <div class="brand">
       <span class="dot" id="liveDot"></span>
       <div>
-        <h1>Stock News Live</h1>
+        <h1>Market News Live</h1>
         <p class="muted" id="statusLine">불러오는 중…</p>
       </div>
     </div>
@@ -29,23 +29,22 @@
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab active" data-filter="all">전체</button>
-    <button class="tab" data-filter="kr">🇰🇷 국내</button>
-    <button class="tab" data-filter="us">🇺🇸 해외</button>
+    <button class="tab active" data-filter="kr_stock">🇰🇷 국내주식</button>
+    <button class="tab" data-filter="us_stock">🇺🇸 해외주식</button>
+    <button class="tab" data-filter="kr_coin">🇰🇷 국내코인</button>
+    <button class="tab" data-filter="us_coin">🇺🇸 해외코인</button>
     <span class="count" id="countLabel">0건</span>
   </nav>
 
   <main class="layout">
-    <section class="col" data-market="kr">
-      <h2 class="col-title">🇰🇷 국내 주식 뉴스</h2>
-      <div class="list" id="listKr">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-      </div>
-    </section>
-    <section class="col" data-market="us">
-      <h2 class="col-title">🇺🇸 해외 주식 뉴스</h2>
-      <div class="list" id="listUs">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+    <section class="col" id="activeColumn">
+      <h2 class="col-title" id="activeColTitle">국내주식</h2>
+      <div class="list" id="newsList">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
       </div>
     </section>
   </main>

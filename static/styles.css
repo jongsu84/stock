@@ -9,12 +9,16 @@
   --muted: #6b7488;
   --accent: #4f8cff;
   --accent-soft: rgba(79, 140, 255, 0.12);
-  --kr: #ff5b6e;
-  --us: #4f8cff;
+  /* 카테고리별 컬러 */
+  --kr-stock: #ff5b6e;     /* 핑크-레드 */
+  --us-stock: #4f8cff;     /* 블루 */
+  --kr-coin: #f5a623;      /* 오렌지-옐로 */
+  --us-coin: #8b5cf6;      /* 퍼플 */
   --green: #36d399;
   --shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   --radius: 14px;
   --gap: 14px;
+  --content-max: 880px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -150,31 +154,23 @@ a { color: inherit; text-decoration: none; }
 
 /* ---------- layout ---------- */
 .layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap);
-  padding: 16px 20px 80px;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 18px 20px 80px;
 }
 .col { min-width: 0; }
 .col-title {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 6px 4px 12px;
-  color: var(--text-dim);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: 15px;
+  font-weight: 800;
+  margin: 6px 2px 14px;
+  color: var(--text);
+  letter-spacing: -0.01em;
 }
 .list { display: flex; flex-direction: column; gap: var(--gap); }
 
-/* hide one column when filtered */
-.layout.filter-kr [data-market="us"],
-.layout.filter-us [data-market="kr"] { display: none; }
-.layout.filter-kr,
-.layout.filter-us { grid-template-columns: 1fr; }
-
 /* mobile */
 @media (max-width: 880px) {
-  .layout { grid-template-columns: 1fr; padding: 12px 14px 80px; }
+  .layout { padding: 12px 14px 80px; }
   .search input { width: 100%; }
   .brand h1 { font-size: 16px; }
 }
@@ -219,8 +215,10 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
   border-radius: 999px;
 }
-.tag.kr { background: rgba(255, 91, 110, 0.14); color: var(--kr); }
-.tag.us { background: rgba(79, 140, 255, 0.14); color: var(--us); }
+.tag.kr-stock { background: rgba(255, 91, 110, 0.14); color: var(--kr-stock); }
+.tag.us-stock { background: rgba(79, 140, 255, 0.14); color: var(--us-stock); }
+.tag.kr-coin  { background: rgba(245, 166, 35, 0.16); color: var(--kr-coin); }
+.tag.us-coin  { background: rgba(139, 92, 246, 0.16); color: var(--us-coin); }
 
 .card-title {
   font-size: 15px;
