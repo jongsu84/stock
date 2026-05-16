@@ -31,7 +31,6 @@ const state = {
 const els = {
   list: document.getElementById("newsList"),
   colTitle: document.getElementById("activeColTitle"),
-  countLabel: document.getElementById("countLabel"),
   statusLine: document.getElementById("statusLine"),
   updatedAt: document.getElementById("updatedAt"),
   autoRefresh: document.getElementById("autoRefresh"),
@@ -39,6 +38,7 @@ const els = {
   refreshBtn: document.getElementById("refreshBtn"),
   search: document.getElementById("searchInput"),
   tabs: document.querySelectorAll(".tab"),
+  tabCounts: document.querySelectorAll("[data-count-for]"),
 };
 
 function escapeHtml(str) {
@@ -112,16 +112,14 @@ function render() {
       .join("");
   }
 
-  // 카테고리별 카운트 표시
-  const perMarket = Object.keys(MARKET_LABELS).reduce((acc, m) => {
-    acc[m] = state.items.filter((i) => i.market === m).length;
-    return acc;
-  }, {});
-  els.countLabel.textContent =
-    `${filtered.length}건  ` +
-    Object.entries(perMarket)
-      .map(([m, n]) => `${MARKET_LABELS[m]} ${n}`)
-      .join(" · ");
+  // 탭별 카운트 업데이트 (검색어가 있으면 필터링된 수, 없으면 전체 수)
+  els.tabCounts.forEach((el) => {
+    const market = el.dataset.countFor;
+    const count = state.items.filter(
+      (i) => i.market === market && matchesQuery(i, q)
+    ).length;
+    el.textContent = count;
+  });
 
   els.colTitle.textContent = MARKET_LABELS[state.filter] || state.filter;
 }

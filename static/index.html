@@ -14,7 +14,7 @@
     <div class="brand">
       <span class="dot" id="liveDot"></span>
       <div>
-        <h1>Market News Live</h1>
+        <h1>JOCOJOSO News Live</h1>
         <p class="muted" id="statusLine">불러오는 중…</p>
       </div>
     </div>
@@ -29,11 +29,22 @@
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab active" data-filter="kr_stock">🇰🇷 국내주식</button>
-    <button class="tab" data-filter="us_stock">🇺🇸 해외주식</button>
-    <button class="tab" data-filter="kr_coin">🇰🇷 국내코인</button>
-    <button class="tab" data-filter="us_coin">🇺🇸 해외코인</button>
-    <span class="count" id="countLabel">0건</span>
+    <button class="tab active" data-filter="kr_stock">
+      <span class="tab-label">🇰🇷 국내주식</span>
+      <span class="tab-count" data-count-for="kr_stock">0</span>
+    </button>
+    <button class="tab" data-filter="us_stock">
+      <span class="tab-label">🇺🇸 해외주식</span>
+      <span class="tab-count" data-count-for="us_stock">0</span>
+    </button>
+    <button class="tab" data-filter="kr_coin">
+      <span class="tab-label">🇰🇷 국내코인</span>
+      <span class="tab-count" data-count-for="kr_coin">0</span>
+    </button>
+    <button class="tab" data-filter="us_coin">
+      <span class="tab-label">🇺🇸 해외코인</span>
+      <span class="tab-count" data-count-for="us_coin">0</span>
+    </button>
   </nav>
 
   <main class="layout">
