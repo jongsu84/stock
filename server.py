@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-import socket
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, wait
@@ -17,14 +16,17 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 import feedparser
+import requests
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
-# feedparser는 내부적으로 urllib을 쓰는데 기본 timeout이 없어
-# 일부 RSS 사이트가 느리면 무한 대기 → 전체 refresh가 hang됨.
-# 전역 소켓 타임아웃을 강제 설정해 한 피드가 죽지 않도록.
-# Render 싱가포르 DC에서는 일부 사이트가 느려서 15초로 늘림.
-socket.setdefaulttimeout(15)
+# 과거 socket.setdefaulttimeout(15)를 썼으나, 이 설정은 워커 임포트
+# 이후 accept()로 생성되는 모든 소켓(= Render proxy ↔ 컨테이너 응답
+# 소켓 포함)에 적용되어 HTTP 응답 자체가 15초 후 끊겨 외부에서
+# 사이트가 hang되는 증상이 있었다.
+# 대신 requests로 RSS를 직접 가져와 feedparser에는 bytes만 넘긴다.
+# 그러면 timeout을 requests.get()에 국소적으로 줄 수 있고,
+# 전역 소켓 타임아웃은 더 이상 필요 없다.
 
 logging.basicConfig(
     level=logging.INFO,
@@ -127,12 +129,13 @@ def make_id(market: str, source: str, link: str, title: str) -> str:
 def fetch_feed(market: str, source: str, url: str) -> list[NewsItem]:
     log.info("fetching feed: %s (%s)", source, market)
     try:
-        parsed = feedparser.parse(
+        resp = requests.get(
             url,
-            request_headers={
-                "User-Agent": "Mozilla/5.0 (StockNewsDashboard/1.0)",
-            },
+            headers={"User-Agent": "Mozilla/5.0 (StockNewsDashboard/1.0)"},
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
+        resp.raise_for_status()
+        parsed = feedparser.parse(resp.content)
     except Exception as exc:  # noqa: BLE001
         log.warning("feed error %s: %s", source, exc)
         return []
