@@ -217,14 +217,23 @@ def refresh_all() -> None:
         deduped.append(item)
 
     deduped = deduped[:MAX_TOTAL_ITEMS]
-    store.replace(deduped)
+    elapsed = time.time() - start
     counts = {m: sum(1 for i in deduped if i.market == m) for m in MARKET_LABELS}
-    log.info(
-        "refresh done in %.2fs, %d items (%s)",
-        time.time() - start,
-        len(deduped),
-        ", ".join(f"{m}={n}" for m, n in counts.items()),
-    )
+    # 핵심: 0건 결과로 기존 정상 데이터를 wipe하지 않음.
+    # 모든 피드가 cancel/실패한 경우 이전 store를 유지.
+    if deduped:
+        store.replace(deduped)
+        log.info(
+            "refresh done in %.2fs, %d items (%s)",
+            elapsed,
+            len(deduped),
+            ", ".join(f"{m}={n}" for m, n in counts.items()),
+        )
+    else:
+        log.warning(
+            "refresh got 0 items in %.2fs — keeping previous store",
+            elapsed,
+        )
 
 
 def background_loop() -> None:
