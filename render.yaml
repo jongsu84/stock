@@ -3,7 +3,7 @@ services:
     name: stock-news-dashboard
     runtime: python
     plan: free
-    region: singapore
+    region: oregon
     branch: main
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     # 단일 워커: 백그라운드 RSS 수집 스레드가 중복 실행되지 않도록.
