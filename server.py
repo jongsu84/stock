@@ -190,8 +190,34 @@ def background_loop() -> None:
         time.sleep(REFRESH_INTERVAL_SECONDS)
 
 
+_bg_lock = threading.Lock()
+_bg_started = False
+
+
+def ensure_background_started() -> None:
+    """Idempotently start the background fetch loop.
+
+    Module-level threads can be unreliable under some gunicorn worker
+    configurations, so we also call this lazily from request handlers.
+    """
+    global _bg_started
+    if _bg_started:
+        return
+    with _bg_lock:
+        if _bg_started:
+            return
+        _bg_started = True
+        log.info("starting background fetch loop")
+        threading.Thread(target=background_loop, daemon=True).start()
+
+
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
+
+
+@app.before_request
+def _ensure_bg() -> None:
+    ensure_background_started()
 
 
 @app.route("/")
@@ -232,12 +258,9 @@ def api_health():
     )
 
 
-def start_background() -> None:
-    t = threading.Thread(target=background_loop, daemon=True)
-    t.start()
-
-
-start_background()
+# Best-effort start at import time. The @app.before_request hook above
+# guarantees the loop runs even if this fails under some WSGI servers.
+ensure_background_started()
 
 
 if __name__ == "__main__":
