@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import socket
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -18,6 +19,11 @@ from typing import Iterable
 import feedparser
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
+
+# feedparser는 내부적으로 urllib을 쓰는데 기본 timeout이 없어
+# 일부 RSS 사이트가 느리면 무한 대기 → 전체 refresh가 hang됨.
+# 전역 소켓 타임아웃을 강제 설정해 한 피드가 죽지 않도록.
+socket.setdefaulttimeout(10)
 
 logging.basicConfig(
     level=logging.INFO,
