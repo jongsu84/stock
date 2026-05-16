@@ -177,13 +177,27 @@ def fetch_feed(market: str, source: str, url: str) -> list[NewsItem]:
 
 REFRESH_DEADLINE_SECONDS = 90  # 전체 refresh 하드 데드라인 (Render 싱가포르 DC 느린 RSS 대응)
 
+# 동시에 여러 refresh_all()이 돌면 워커 수가 N배가 되어 Render 컨테이너가
+# 폭발 → 모든 피드 cancel. 한 번에 하나만 실행되도록 mutex.
+_refresh_lock = threading.Lock()
+
 
 def refresh_all() -> None:
+    if not _refresh_lock.acquire(blocking=False):
+        log.info("refresh already in progress, skipping")
+        return
+    try:
+        _refresh_all_inner()
+    finally:
+        _refresh_lock.release()
+
+
+def _refresh_all_inner() -> None:
     start = time.time()
     all_items: list[NewsItem] = []
     # 컨텍스트 매니저 대신 수동 관리 → hang하는 future를 cancel_futures로 강제 종료.
-    # 워커 10개로 늘려 26개 피드를 3 배치 안에 처리
-    pool = ThreadPoolExecutor(max_workers=10)
+    # 워커 6개 (이전 10개는 Render 자원 한도 초과)
+    pool = ThreadPoolExecutor(max_workers=6)
     try:
         futures = {
             pool.submit(fetch_feed, market, source, url): (market, source)
