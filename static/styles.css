@@ -333,29 +333,6 @@ button { font: inherit; }
   border-color: transparent;
 }
 
-/* region marker — KR / US text instead of emoji */
-.region {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  padding: 1px 6px;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-3);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-}
-
-.tab.active .region {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: transparent;
-}
-
 .tab-count {
   display: inline-flex;
   align-items: center;
