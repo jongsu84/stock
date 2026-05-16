@@ -23,7 +23,8 @@ from flask_cors import CORS
 # feedparser는 내부적으로 urllib을 쓰는데 기본 timeout이 없어
 # 일부 RSS 사이트가 느리면 무한 대기 → 전체 refresh가 hang됨.
 # 전역 소켓 타임아웃을 강제 설정해 한 피드가 죽지 않도록.
-socket.setdefaulttimeout(10)
+# Render 싱가포르 DC에서는 일부 사이트가 느려서 15초로 늘림.
+socket.setdefaulttimeout(15)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -174,14 +175,15 @@ def fetch_feed(market: str, source: str, url: str) -> list[NewsItem]:
     return items
 
 
-REFRESH_DEADLINE_SECONDS = 40  # 전체 refresh 하드 데드라인
+REFRESH_DEADLINE_SECONDS = 90  # 전체 refresh 하드 데드라인 (Render 싱가포르 DC 느린 RSS 대응)
 
 
 def refresh_all() -> None:
     start = time.time()
     all_items: list[NewsItem] = []
     # 컨텍스트 매니저 대신 수동 관리 → hang하는 future를 cancel_futures로 강제 종료.
-    pool = ThreadPoolExecutor(max_workers=6)
+    # 워커 10개로 늘려 26개 피드를 3 배치 안에 처리
+    pool = ThreadPoolExecutor(max_workers=10)
     try:
         futures = {
             pool.submit(fetch_feed, market, source, url): (market, source)
