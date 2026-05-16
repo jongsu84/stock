@@ -3,7 +3,8 @@
 const API_NEWS = "/api/news";
 const API_REFRESH = "/api/refresh";
 const AUTO_REFRESH_MS = 60_000;
-const NEW_THRESHOLD_MS = 10 * 60 * 1000;
+const HERO_THRESHOLD_MS = 10 * 60 * 1000;    // 10분 — 1순위 (hero)
+const FRESH_THRESHOLD_MS = 60 * 60 * 1000;   // 1시간 — 2순위 (fresh)
 
 const MARKET_LABELS = {
   kr_stock: "국내주식",
@@ -35,6 +36,7 @@ const els = {
   updatedAt: document.getElementById("updatedAt"),
   autoRefresh: document.getElementById("autoRefresh"),
   liveDot: document.getElementById("liveDot"),
+  liveLabel: document.getElementById("liveLabel"),
   refreshBtn: document.getElementById("refreshBtn"),
   search: document.getElementById("searchInput"),
   tabs: document.querySelectorAll(".tab"),
@@ -74,16 +76,35 @@ function matchesQuery(item, q) {
   return hay.includes(q);
 }
 
-function renderCard(item, isNew) {
+function setLive(stateName, label) {
+  els.liveDot.dataset.state = stateName;
+  els.liveLabel.textContent = label;
+}
+
+function classifyAge(publishedIso, isFirstInList) {
+  const t = new Date(publishedIso).getTime();
+  if (isNaN(t)) return "standard";
+  const diff = Date.now() - t;
+  if (diff < HERO_THRESHOLD_MS && isFirstInList) return "hero";
+  if (diff < FRESH_THRESHOLD_MS) return "fresh";
+  return "standard";
+}
+
+function renderCard(item, level) {
   const tagClass = MARKET_TAG_CLASS[item.market] || "kr-stock";
   const tagLabel = MARKET_LABELS[item.market] || item.market;
+  const cls = ["card", level].join(" ");
+  const newBadge = level === "hero"
+    ? `<span class="new-badge">NEW</span>`
+    : "";
   return `
-    <a class="card${isNew ? " new" : ""}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">
+    <a class="${cls}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener" role="listitem">
       <div class="card-meta">
         <span class="tag ${tagClass}">${tagLabel}</span>
-        <span>${escapeHtml(item.source)}</span>
+        <span class="card-source">${escapeHtml(item.source)}</span>
         <span class="sep">·</span>
-        <span class="card-time">${timeAgo(item.published)}</span>
+        <time class="card-time" datetime="${escapeHtml(item.published)}">${timeAgo(item.published)}</time>
+        ${newBadge}
       </div>
       <h3 class="card-title">${escapeHtml(item.title)}</h3>
       ${item.summary ? `<p class="card-summary">${escapeHtml(item.summary)}</p>` : ""}
@@ -93,26 +114,27 @@ function renderCard(item, isNew) {
 
 function render() {
   const q = state.query.trim().toLowerCase();
-  const now = Date.now();
 
   const filtered = state.items.filter(
     (i) => i.market === state.filter && matchesQuery(i, q)
   );
 
   if (!filtered.length) {
-    els.list.innerHTML = `<div class="empty">표시할 뉴스가 없습니다</div>`;
+    els.list.innerHTML = `
+      <div class="empty">
+        <strong>표시할 뉴스가 없습니다</strong>
+        ${q ? `"${escapeHtml(q)}" 와(과) 일치하는 결과가 없어요.` : "잠시 후 자동으로 새 뉴스가 추가됩니다."}
+      </div>
+    `;
   } else {
     els.list.innerHTML = filtered
-      .map((item) => {
-        const t = new Date(item.published).getTime();
-        const isNew =
-          !state.firstLoad && !state.seenIds.has(item.id) && now - t < NEW_THRESHOLD_MS;
-        return renderCard(item, isNew);
+      .map((item, idx) => {
+        const level = classifyAge(item.published, idx === 0);
+        return renderCard(item, level);
       })
       .join("");
   }
 
-  // 탭별 카운트 업데이트 (검색어가 있으면 필터링된 수, 없으면 전체 수)
   els.tabCounts.forEach((el) => {
     const market = el.dataset.countFor;
     const count = state.items.filter(
@@ -125,15 +147,20 @@ function render() {
 }
 
 function applyFilter() {
-  els.tabs.forEach((t) =>
-    t.classList.toggle("active", t.dataset.filter === state.filter)
-  );
+  let activeTabId = "";
+  els.tabs.forEach((t) => {
+    const isActive = t.dataset.filter === state.filter;
+    t.classList.toggle("active", isActive);
+    t.setAttribute("aria-selected", isActive ? "true" : "false");
+    if (isActive) activeTabId = t.id;
+  });
+  const panel = document.getElementById("activeColumn");
+  if (panel && activeTabId) panel.setAttribute("aria-labelledby", activeTabId);
   render();
 }
 
 async function fetchNews(triggeredByUser = false) {
-  els.liveDot.classList.remove("error");
-  els.liveDot.classList.add("loading");
+  setLive("loading", "LOADING");
   els.statusLine.textContent = "불러오는 중…";
   if (triggeredByUser) {
     els.refreshBtn.classList.add("spinning");
@@ -150,16 +177,15 @@ async function fetchNews(triggeredByUser = false) {
     render();
     state.items.forEach((i) => state.seenIds.add(i.id));
     state.firstLoad = false;
-    els.liveDot.classList.remove("loading", "error");
+    setLive("ok", "LIVE");
     const stamp = data.last_updated
       ? new Date(data.last_updated).toLocaleTimeString("ko-KR")
       : "—";
-    els.statusLine.textContent = `최근 업데이트: ${stamp}`;
-    els.updatedAt.textContent = `마지막 수집: ${stamp}`;
+    els.statusLine.textContent = `업데이트 ${stamp}`;
+    els.updatedAt.textContent = `LAST ${stamp}`;
   } catch (err) {
     console.error(err);
-    els.liveDot.classList.remove("loading");
-    els.liveDot.classList.add("error");
+    setLive("error", "ERROR");
     els.statusLine.textContent = `오류: ${err.message}`;
   } finally {
     els.refreshBtn.classList.remove("spinning");
@@ -193,7 +219,6 @@ function setupEvents() {
       e.preventDefault();
       fetchNews(true);
     }
-    // 숫자 키 1-4로 탭 빠른 이동
     if (["1", "2", "3", "4"].includes(e.key) && document.activeElement !== els.search) {
       const filters = ["kr_stock", "us_stock", "kr_coin", "us_coin"];
       state.filter = filters[parseInt(e.key, 10) - 1];
@@ -203,9 +228,9 @@ function setupEvents() {
 }
 
 function startAutoRefresh() {
-  els.autoRefresh.textContent = `자동 새로고침: ${AUTO_REFRESH_MS / 1000}초`;
+  els.autoRefresh.textContent = `AUTO ${AUTO_REFRESH_MS / 1000}s`;
   setInterval(fetchNews, AUTO_REFRESH_MS);
-  setInterval(render, 30_000); // refresh relative times
+  setInterval(render, 30_000);
 }
 
 setupEvents();

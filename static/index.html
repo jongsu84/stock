@@ -3,67 +3,89 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>주식·코인 뉴스 대시보드</title>
+<title>JOCOJOSO News Live — 주식·코인 실시간 뉴스</title>
+<meta name="description" content="국내·해외 주식과 코인 뉴스를 한 화면에서 실시간으로 확인하세요." />
+<meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#f6f7fa" media="(prefers-color-scheme: light)" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar" role="banner">
     <div class="brand">
-      <span class="dot" id="liveDot"></span>
-      <div>
+      <div class="brand-meta">
         <h1>JOCOJOSO News Live</h1>
-        <p class="muted" id="statusLine">불러오는 중…</p>
+        <span class="live-pill" id="liveDot" data-state="loading" aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="liveLabel">LOADING</span>
+        </span>
       </div>
     </div>
+
     <div class="controls">
-      <div class="search">
-        <input id="searchInput" type="search" placeholder="제목·요약·종목 검색" autocomplete="off" />
-      </div>
-      <button id="refreshBtn" class="btn" title="지금 새로고침">
-        <span class="ico">↻</span><span class="lbl">새로고침</span>
+      <label class="search" aria-label="뉴스 검색">
+        <svg class="search-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="제목·요약·출처 검색" autocomplete="off" />
+      </label>
+
+      <button id="refreshBtn" class="btn" type="button" aria-label="지금 새로고침">
+        <svg class="ico" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 8a6 6 0 0 1 10.5-4M14 8A6 6 0 0 1 3.5 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M12.5 1.5V4.5H9.5M3.5 14.5V11.5H6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="lbl">새로고침</span>
       </button>
     </div>
   </header>
 
-  <nav class="tabs" role="tablist">
-    <button class="tab active" data-filter="kr_stock">
-      <span class="tab-label">🇰🇷 국내주식</span>
+  <nav class="tabs" role="tablist" aria-label="카테고리">
+    <button class="tab active" type="button" role="tab" id="tab-kr_stock" data-filter="kr_stock" aria-selected="true" aria-controls="activeColumn">
+      <span class="region">KR</span>
+      <span class="tab-label">국내주식</span>
       <span class="tab-count" data-count-for="kr_stock">0</span>
     </button>
-    <button class="tab" data-filter="us_stock">
-      <span class="tab-label">🇺🇸 해외주식</span>
+    <button class="tab" type="button" role="tab" id="tab-us_stock" data-filter="us_stock" aria-selected="false" aria-controls="activeColumn">
+      <span class="region">US</span>
+      <span class="tab-label">해외주식</span>
       <span class="tab-count" data-count-for="us_stock">0</span>
     </button>
-    <button class="tab" data-filter="kr_coin">
-      <span class="tab-label">🇰🇷 국내코인</span>
+    <button class="tab" type="button" role="tab" id="tab-kr_coin" data-filter="kr_coin" aria-selected="false" aria-controls="activeColumn">
+      <span class="region">KR</span>
+      <span class="tab-label">국내코인</span>
       <span class="tab-count" data-count-for="kr_coin">0</span>
     </button>
-    <button class="tab" data-filter="us_coin">
-      <span class="tab-label">🇺🇸 해외코인</span>
+    <button class="tab" type="button" role="tab" id="tab-us_coin" data-filter="us_coin" aria-selected="false" aria-controls="activeColumn">
+      <span class="region">US</span>
+      <span class="tab-label">해외코인</span>
       <span class="tab-count" data-count-for="us_coin">0</span>
     </button>
   </nav>
 
-  <main class="layout">
-    <section class="col" id="activeColumn">
-      <h2 class="col-title" id="activeColTitle">국내주식</h2>
-      <div class="list" id="newsList">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
+  <main class="layout" role="main">
+    <section class="col" id="activeColumn" role="tabpanel" aria-labelledby="tab-kr_stock" aria-live="polite" tabindex="0">
+      <header class="col-head">
+        <h2 class="col-title" id="activeColTitle">국내주식</h2>
+        <span class="col-meta" id="statusLine">불러오는 중…</span>
+      </header>
+      <div class="list" id="newsList" role="list">
+        <div class="skeleton" aria-hidden="true"></div>
+        <div class="skeleton" aria-hidden="true"></div>
+        <div class="skeleton" aria-hidden="true"></div>
+        <div class="skeleton" aria-hidden="true"></div>
+        <div class="skeleton" aria-hidden="true"></div>
       </div>
     </section>
   </main>
 
-  <footer class="footer">
+  <footer class="footer" role="contentinfo">
     <span id="updatedAt">—</span>
     <span class="sep">·</span>
-    <span id="autoRefresh">자동 새로고침: 60초</span>
+    <span id="autoRefresh">AUTO 60s</span>
   </footer>
 
   <script src="/app.js" defer></script>
