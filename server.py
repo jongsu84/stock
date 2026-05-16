@@ -11,7 +11,7 @@ import re
 import socket
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Iterable
@@ -174,21 +174,37 @@ def fetch_feed(market: str, source: str, url: str) -> list[NewsItem]:
     return items
 
 
+REFRESH_DEADLINE_SECONDS = 40  # 전체 refresh 하드 데드라인
+
+
 def refresh_all() -> None:
     start = time.time()
     all_items: list[NewsItem] = []
-    with ThreadPoolExecutor(max_workers=6) as pool:
+    # 컨텍스트 매니저 대신 수동 관리 → hang하는 future를 cancel_futures로 강제 종료.
+    pool = ThreadPoolExecutor(max_workers=6)
+    try:
         futures = {
             pool.submit(fetch_feed, market, source, url): (market, source)
             for market, source, url in FEEDS
         }
-        for fut in as_completed(futures):
+        done, not_done = wait(futures, timeout=REFRESH_DEADLINE_SECONDS)
+        for fut in done:
             try:
-                items = fut.result(timeout=REQUEST_TIMEOUT_SECONDS + 5)
+                items = fut.result(timeout=1)
                 all_items.extend(items)
             except Exception as exc:  # noqa: BLE001
                 market, source = futures[fut]
                 log.warning("future failed %s/%s: %s", market, source, exc)
+        if not_done:
+            log.warning(
+                "deadline reached, cancelling %d hanging feeds: %s",
+                len(not_done),
+                ", ".join(f"{futures[f][0]}/{futures[f][1]}" for f in not_done),
+            )
+    finally:
+        # cancel_futures=True (Python 3.9+): 대기 중인 future는 취소하고
+        # 이미 실행 중인 것은 백그라운드에서 끝나도록 두고 즉시 반환.
+        pool.shutdown(wait=False, cancel_futures=True)
 
     seen_ids: set[str] = set()
     deduped: list[NewsItem] = []
