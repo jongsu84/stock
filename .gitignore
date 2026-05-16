@@ -18,3 +18,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# cloudflared 임시 터널 도구
+cloudflared
+cloudflared.tgz
+tunnel.log

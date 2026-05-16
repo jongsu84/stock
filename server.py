@@ -316,15 +316,18 @@ def api_health():
             "items": len(items),
             "last_updated_epoch": last_updated,
             "feeds_configured": len(FEEDS),
+            "bg_started": _bg_started,
         }
     )
 
 
-# Best-effort start at import time. The @app.before_request hook above
-# guarantees the loop runs even if this fails under some WSGI servers.
-ensure_background_started()
-
+# Render 헬스체크는 부팅 후 즉시 포트 응답이 와야 통과한다.
+# 모듈 임포트 시점에 백그라운드 스레드를 시작하면, 일부 환경에서
+# import가 늦어져 워커 boot 자체가 timeout되는 사례가 있어
+# import는 가볍게 두고, ensure_background_started()는
+# @app.before_request 훅에서만 호출한다.
 
 if __name__ == "__main__":
+    ensure_background_started()
     port = int(os.environ.get("PORT", "5050"))
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
