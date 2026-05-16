@@ -6,6 +6,7 @@ caches results in memory, and serves them via a JSON API.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import threading
 import time
@@ -240,4 +241,5 @@ start_background()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5050, debug=False, use_reloader=False)
+    port = int(os.environ.get("PORT", "5050"))
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
