@@ -228,6 +228,11 @@ def index():
 @app.route("/api/news")
 def api_news():
     items, last_updated = store.snapshot()
+    # Fallback: trigger refresh if data is empty or stale.
+    # 일부 WSGI 설정에서 백그라운드 루프가 안 도는 경우를 대비.
+    stale = (time.time() - last_updated) > REFRESH_INTERVAL_SECONDS
+    if not items or stale:
+        threading.Thread(target=refresh_all, daemon=True).start()
     return jsonify(
         {
             "last_updated": datetime.fromtimestamp(last_updated, tz=timezone.utc).isoformat()
